@@ -1,0 +1,2441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkinStack — Your Skin. Your Formula.</title>
+
+<!-- PWA Meta Tags -->
+<meta name="application-name" content="SkinStack">
+<meta name="description" content="Personalised skincare formulated for your unique skin biology, lifestyle and environment.">
+<meta name="theme-color" content="#0D1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SkinStack">
+
+<!-- Open Graph / Social Sharing -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="SkinStack — Your Skin. Your Formula.">
+<meta property="og:description" content="AI-powered personalised skincare. Your formula is unlike anyone else's.">
+<meta property="og:image" content="https://og-image.vercel.app/SkinStack.png">
+
+<!-- PWA Manifest (inline via JS blob so it works as a single file) -->
+<script>
+  const manifest = {
+    name: "SkinStack — Personalised Skincare",
+    short_name: "SkinStack",
+    description: "Your skin. Your formula. Delivered.",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#0D1117",
+    theme_color: "#0D1117",
+    orientation: "portrait",
+    icons: [
+      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230D1117'/%3E%3Ccircle cx='96' cy='96' r='60' fill='none' stroke='url(%23g)' stroke-width='8'/%3E%3Ctext x='96' y='110' text-anchor='middle' font-size='52' fill='white'%3E✦%3C/text%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%235C7A6B'/%3E%3Cstop offset='100%25' stop-color='%23C9A84C'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" },
+      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230D1117'/%3E%3Ccircle cx='256' cy='256' r='160' fill='none' stroke='url(%23g)' stroke-width='16'/%3E%3Ctext x='256' y='290' text-anchor='middle' font-size='140' fill='white'%3E✦%3C/text%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%235C7A6B'/%3E%3Cstop offset='100%25' stop-color='%23C9A84C'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+  const manifestURL = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = manifestURL;
+  document.currentScript.after(link);
+</script>
+
+<!-- Service Worker (offline support) -->
+<script>
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      const CACHE = 'skinstack-v1';
+      const FONTS = [
+        'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@300;400&display=swap'
+      ];
+      self.addEventListener('install', e => {
+        e.waitUntil(caches.open(CACHE).then(c => c.addAll(FONTS).catch(()=>{})));
+        self.skipWaiting();
+      });
+      self.addEventListener('fetch', e => {
+        e.respondWith(
+          caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+            if (e.request.url.includes('fonts')) {
+              const clone = res.clone();
+              caches.open(CACHE).then(c => c.put(e.request, clone));
+            }
+            return res;
+          }).catch(() => caches.match(e.request)))
+        );
+      });
+    `;
+    const swBlob = new Blob([swCode], {type: 'application/javascript'});
+    const swURL = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swURL).catch(() => {});
+  }
+</script>
+
+<!-- Install prompt banner -->
+<style>
+  #install-banner {
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 340px;
+    background: #1a1a1a;
+    border: 1px solid rgba(92,122,107,0.3);
+    border-radius: 16px;
+    padding: 14px 16px;
+    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    animation: slide-up 0.4s ease;
+  }
+  #install-banner.show { display: flex; }
+  .ib-icon { font-size: 28px; flex-shrink: 0; }
+  .ib-text { flex: 1; }
+  .ib-title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: white; }
+  .ib-sub { font-family: 'DM Sans', sans-serif; font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .ib-btn { background: #5C7A6B; color: white; border: none; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+  .ib-close { color: rgba(255,255,255,0.4); font-size: 18px; cursor: pointer; flex-shrink: 0; padding: 0 4px; background: none; border: none; }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0D1117;
+  --cream: #F7F3EE;
+  --warm-white: #FDFAF6;
+  --sage: #5C7A6B;
+  --sage-light: #8BA99A;
+  --sage-dark: #3D5248;
+  --gold: #C9A84C;
+  --gold-light: #E8D5A3;
+  --blush: #D4897A;
+  --blush-light: #F0D0C8;
+  --sky: #6B9AB8;
+  --sky-light: #C8DDE8;
+  --mist: #E8E4DF;
+  --bark: #8C6E5D;
+  --surface: #F2EDE7;
+  --card: #FEFCFA;
+  --border: rgba(92,122,107,0.15);
+  --shadow: 0 4px 32px rgba(13,17,23,0.08);
+  --shadow-lg: 0 12px 48px rgba(13,17,23,0.14);
+  --r: 16px;
+  --r-lg: 24px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--ink);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-image: 
+    radial-gradient(ellipse at 20% 50%, rgba(92,122,107,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.08) 0%, transparent 50%);
+}
+
+/* ─── PHONE SHELL ─── */
+.phone {
+  width: 390px;
+  height: 844px;
+  background: var(--warm-white);
+  border-radius: 44px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 
+    0 0 0 1px rgba(255,255,255,0.1),
+    0 30px 80px rgba(0,0,0,0.6),
+    0 0 0 10px #1a1a1a,
+    0 0 0 11px #2a2a2a;
+}
+
+.phone::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 120px; height: 32px;
+  background: #1a1a1a;
+  border-radius: 0 0 20px 20px;
+  z-index: 999;
+}
+
+/* ─── SCREENS ─── */
+.screen {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  scrollbar-width: none;
+}
+.screen::-webkit-scrollbar { display: none; }
+.screen.active { opacity: 1; pointer-events: all; }
+
+/* ─── SPLASH SCREEN ─── */
+#splash {
+  background: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.splash-bg {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 30% 40%, rgba(92,122,107,0.25) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 70%, rgba(201,168,76,0.15) 0%, transparent 45%),
+    radial-gradient(ellipse at 60% 20%, rgba(212,137,122,0.1) 0%, transparent 40%);
+  animation: breathe 6s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,100% { opacity:0.8; } 50% { opacity:1; }
+}
+
+.splash-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 60px 40px 40px;
+}
+
+.splash-orb {
+  width: 100px; height: 100px;
+  background: conic-gradient(from 0deg, var(--sage), var(--gold), var(--blush), var(--sky), var(--sage));
+  border-radius: 50%;
+  animation: spin-slow 8s linear infinite;
+  filter: blur(1px);
+  position: relative;
+}
+.splash-orb::after {
+  content: '✦';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  filter: blur(0);
+  color: white;
+  animation: spin-slow 8s linear infinite reverse;
+}
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+
+.splash-brand {
+  text-align: center;
+}
+.splash-brand h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 52px;
+  font-weight: 700;
+  color: var(--cream);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.splash-brand p {
+  font-size: 13px;
+  color: var(--sage-light);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 8px;
+  font-weight: 300;
+}
+
+.splash-tagline {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  color: rgba(247,243,238,0.7);
+  text-align: center;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.splash-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 20px;
+}
+.btn-primary {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, var(--sage-dark), var(--sage));
+  color: white;
+  border: none;
+  border-radius: var(--r);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.btn-primary:hover::after { opacity: 1; }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-ghost {
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  color: var(--cream);
+  border: 1px solid rgba(247,243,238,0.2);
+  border-radius: var(--r);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-ghost:hover { border-color: rgba(247,243,238,0.4); background: rgba(247,243,238,0.05); }
+
+.splash-trust {
+  display: flex;
+  gap: 24px;
+  margin-top: 8px;
+}
+.trust-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.trust-num { font-size: 18px; font-weight: 700; color: var(--gold); font-family: 'Playfair Display', serif; }
+.trust-label { font-size: 10px; color: rgba(247,243,238,0.5); letter-spacing: 1px; text-transform: uppercase; }
+.trust-divider { width: 1px; background: rgba(247,243,238,0.1); align-self: stretch; }
+
+/* ─── ONBOARDING ─── */
+#onboard {
+  background: var(--warm-white);
+}
+
+.onboard-header {
+  padding: 60px 28px 24px;
+  background: linear-gradient(180deg, var(--surface) 0%, var(--warm-white) 100%);
+}
+
+.progress-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+.progress-dot {
+  flex: 1;
+  height: 3px;
+  background: var(--mist);
+  border-radius: 99px;
+  transition: background 0.4s;
+}
+.progress-dot.done { background: var(--sage); }
+.progress-dot.active { background: var(--sage-light); }
+
+.step-label {
+  font-size: 11px;
+  color: var(--sage-light);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.step-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.step-sub {
+  font-size: 14px;
+  color: var(--sage);
+  margin-top: 8px;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.onboard-content {
+  padding: 28px 28px 120px;
+}
+
+/* SCAN ANIMATION */
+.scan-wrapper {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 32px;
+}
+.face-outline {
+  width: 220px;
+  height: 220px;
+  border-radius: 50% 50% 45% 45%;
+  background: linear-gradient(180deg, var(--blush-light) 0%, var(--gold-light) 100%);
+  position: relative;
+  overflow: hidden;
+}
+.scan-line {
+  position: absolute;
+  top: -2px; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--sage), var(--gold), var(--sage), transparent);
+  animation: scan 2.5s ease-in-out infinite;
+  box-shadow: 0 0 20px var(--sage), 0 0 40px rgba(92,122,107,0.3);
+}
+@keyframes scan {
+  0% { top: -2px; opacity:0; }
+  10% { opacity:1; }
+  90% { opacity:1; }
+  100% { top: 100%; opacity:0; }
+}
+.scan-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(92,122,107,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(92,122,107,0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.scan-dots {
+  position: absolute;
+  inset: 0;
+}
+.scan-dot {
+  position: absolute;
+  width: 6px; height: 6px;
+  background: var(--sage);
+  border-radius: 50%;
+  animation: dot-pulse 1.5s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%,100% { opacity:0; transform:scale(0); }
+  50% { opacity:1; transform:scale(1); }
+}
+.scan-corner {
+  position: absolute;
+  width: 24px; height: 24px;
+  border-color: var(--sage);
+  border-style: solid;
+}
+.sc-tl { top:10px; left:10px; border-width: 2px 0 0 2px; border-radius: 4px 0 0 0; }
+.sc-tr { top:10px; right:10px; border-width: 2px 2px 0 0; border-radius: 0 4px 0 0; }
+.sc-bl { bottom:10px; left:10px; border-width: 0 0 2px 2px; border-radius: 0 0 0 4px; }
+.sc-br { bottom:10px; right:10px; border-width: 0 2px 2px 0; border-radius: 0 0 4px 0; }
+
+.scan-status {
+  text-align: center;
+  font-size: 13px;
+  color: var(--sage);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-top: 12px;
+}
+
+.analyzing-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--sage-light);
+  text-align: center;
+  margin-top: 8px;
+  min-height: 16px;
+}
+
+/* QUESTIONS */
+.question-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.q-label {
+  font-size: 11px;
+  color: var(--sage-light);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.q-text {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+.q-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.q-opt {
+  padding: 12px 10px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.q-opt:hover { background: var(--mist); border-color: var(--sage-light); }
+.q-opt.selected { background: linear-gradient(135deg, var(--sage-dark), var(--sage)); color: white; border-color: transparent; }
+.q-opt-full { grid-column: 1/-1; }
+
+.slider-container { margin-top: 8px; }
+.range-input {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 4px;
+  background: linear-gradient(90deg, var(--sage) 50%, var(--mist) 50%);
+  border-radius: 99px;
+  outline: none;
+  cursor: pointer;
+}
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  background: var(--sage-dark);
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(61,82,72,0.4);
+}
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--sage-light);
+  margin-top: 8px;
+}
+
+/* ─── RESULTS / DASHBOARD ─── */
+#results {
+  background: var(--warm-white);
+}
+
+.results-hero {
+  background: linear-gradient(180deg, var(--ink) 0%, var(--sage-dark) 100%);
+  padding: 60px 28px 48px;
+  position: relative;
+  overflow: hidden;
+}
+.results-hero::before {
+  content:'';
+  position: absolute;
+  top: -50%; right: -30%;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(201,168,76,0.2) 0%, transparent 70%);
+}
+.results-hero::after {
+  content:'';
+  position: absolute;
+  bottom: -30%; left: -20%;
+  width: 250px; height: 250px;
+  background: radial-gradient(circle, rgba(212,137,122,0.15) 0%, transparent 70%);
+}
+
+.hero-greeting {
+  font-size: 12px;
+  color: var(--sage-light);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  position: relative; z-index: 2;
+}
+.hero-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px;
+  color: white;
+  font-weight: 600;
+  margin-bottom: 24px;
+  position: relative; z-index: 2;
+}
+
+.skin-age-card {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: relative; z-index: 2;
+}
+.age-ring {
+  position: relative;
+  flex-shrink: 0;
+}
+.age-ring svg {
+  transform: rotate(-90deg);
+}
+.age-ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.age-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+.age-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.age-info {
+  flex: 1;
+}
+.age-headline {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 4px;
+}
+.age-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.5;
+}
+.age-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(92,122,107,0.3);
+  border: 1px solid rgba(92,122,107,0.5);
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  color: var(--sage-light);
+  margin-top: 8px;
+}
+
+.results-body {
+  padding: 28px 28px 120px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.section-link {
+  font-size: 12px;
+  color: var(--sage);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* BIOMARKER GRID */
+.biomarker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.bio-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s;
+}
+.bio-card:hover { transform: translateY(-2px); }
+.bio-icon { font-size: 20px; margin-bottom: 8px; }
+.bio-name { font-size: 11px; color: var(--sage-light); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; margin-bottom: 4px; }
+.bio-value { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; color: var(--ink); }
+.bio-unit { font-size: 11px; color: var(--sage-light); font-family: 'DM Sans', sans-serif; }
+.bio-bar {
+  height: 3px;
+  background: var(--mist);
+  border-radius: 99px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.bio-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--sage), var(--gold));
+  transition: width 1s ease;
+}
+
+/* FORMULA PREVIEW */
+.formula-card {
+  background: linear-gradient(135deg, var(--sage-dark), var(--ink));
+  border-radius: var(--r-lg);
+  padding: 24px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.formula-card:hover { transform: translateY(-2px); }
+.formula-card::before {
+  content:'';
+  position: absolute;
+  top: -40%; right: -20%;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(201,168,76,0.15) 0%, transparent 70%);
+}
+.formula-label { font-size: 11px; color: var(--sage-light); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+.formula-name { font-family: 'Playfair Display', serif; font-size: 24px; color: white; font-weight: 600; margin-bottom: 16px; }
+.formula-ingredients {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.ingredient-pill {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  font-weight: 500;
+}
+.formula-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.formula-status {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+}
+.formula-cta {
+  background: var(--gold);
+  color: var(--ink);
+  padding: 8px 18px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.formula-cta:hover { background: var(--gold-light); }
+
+/* PRODUCT STACK */
+.product-scroll {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+  margin-bottom: 32px;
+}
+.product-scroll::-webkit-scrollbar { display: none; }
+.product-item {
+  flex-shrink: 0;
+  width: 140px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.product-item:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.product-img {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+}
+.p-img-1 { background: linear-gradient(135deg, var(--blush-light), var(--gold-light)); }
+.p-img-2 { background: linear-gradient(135deg, var(--sky-light), var(--blush-light)); }
+.p-img-3 { background: linear-gradient(135deg, var(--gold-light), var(--surface)); }
+.p-img-4 { background: linear-gradient(135deg, var(--sage-light)33, var(--sky-light)); }
+.p-img-5 { background: linear-gradient(135deg, var(--mist), var(--blush-light)); }
+.product-info { padding: 12px; }
+.product-name { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.product-sub { font-size: 10px; color: var(--sage-light); }
+.product-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--surface);
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 9px;
+  color: var(--sage);
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+/* ENV CARD */
+.env-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 32px;
+}
+.env-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.env-location { font-size: 12px; color: var(--sage); font-weight: 500; }
+.env-metrics {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 12px;
+}
+.env-metric { text-align: center; }
+.env-icon { font-size: 22px; margin-bottom: 4px; }
+.env-val { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: var(--ink); }
+.env-lbl { font-size: 9px; color: var(--sage-light); text-transform: uppercase; letter-spacing: 1px; }
+.env-alert {
+  background: linear-gradient(135deg, rgba(201,168,76,0.1), rgba(201,168,76,0.05));
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--bark);
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* ─── FORMULA SCREEN ─── */
+#formula {
+  background: var(--warm-white);
+}
+.formula-hero {
+  background: var(--ink);
+  padding: 60px 28px 36px;
+  position: relative;
+  overflow: hidden;
+}
+.formula-hero::before {
+  content:'';
+  position: absolute;
+  inset:0;
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(92,122,107,0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 30%, rgba(201,168,76,0.2) 0%, transparent 50%);
+}
+.fh-label { font-size:11px; color: var(--sage-light); text-transform:uppercase; letter-spacing:2px; position:relative; z-index:2; }
+.fh-title { font-family:'Playfair Display',serif; font-size:30px; color:white; font-weight:700; margin:6px 0 4px; position:relative; z-index:2; }
+.fh-sub { font-size:13px; color:rgba(255,255,255,0.5); position:relative; z-index:2; }
+.fh-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background: rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.3);
+  padding: 6px 14px; border-radius:99px;
+  font-size:12px; color:var(--gold); margin-top:12px; position:relative; z-index:2;
+  font-weight: 600;
+}
+
+.formula-body { padding: 24px 28px 120px; }
+
+.ingredient-section { margin-bottom: 28px; }
+.ing-section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--sage-light);
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ingredient-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ingredient-row:last-child { border-bottom: none; }
+.ingredient-row:hover { padding-left: 4px; }
+.ing-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.ing-a { background: linear-gradient(135deg, var(--blush-light), var(--gold-light)); }
+.ing-b { background: linear-gradient(135deg, var(--sky-light), var(--blush-light)); }
+.ing-c { background: linear-gradient(135deg, var(--gold-light), var(--mist)); }
+.ing-d { background: linear-gradient(135deg, var(--surface), var(--sky-light)); }
+.ing-e { background: linear-gradient(135deg, var(--mist), var(--blush-light)); }
+.ing-f { background: linear-gradient(135deg, var(--gold-light), var(--surface)); }
+.ing-info { flex: 1; }
+.ing-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.ing-why { font-size: 11px; color: var(--sage); margin-top: 1px; }
+.ing-right { text-align: right; flex-shrink: 0; }
+.ing-conc { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--sage-dark); }
+.ing-conc-label { font-size: 9px; color: var(--sage-light); text-transform: uppercase; letter-spacing: 1px; }
+
+.formula-why-card {
+  background: linear-gradient(135deg, rgba(92,122,107,0.06), rgba(201,168,76,0.04));
+  border: 1px solid rgba(92,122,107,0.12);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.fwc-title { font-size: 13px; font-weight: 600; color: var(--sage-dark); margin-bottom: 10px; }
+.fwc-reason {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 12px; color: var(--ink); line-height: 1.6;
+  margin-bottom: 8px;
+}
+.fwc-reason:last-child { margin-bottom: 0; }
+.fwc-dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--sage);
+  color: white; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+
+/* ─── JOURNEY SCREEN ─── */
+#journey {
+  background: var(--warm-white);
+}
+.journey-header { padding: 60px 28px 24px; background: var(--surface); }
+.journey-body { padding: 24px 28px 120px; }
+
+.checkin-prompt {
+  background: linear-gradient(135deg, var(--sage-dark), var(--sage));
+  border-radius: var(--r-lg);
+  padding: 24px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.checkin-prompt::after {
+  content: '📷';
+  position: absolute;
+  right: 20px; bottom: 10px;
+  font-size: 52px;
+  opacity: 0.2;
+}
+.cp-label { font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 2px; }
+.cp-title { font-family: 'Playfair Display', serif; font-size: 20px; color: white; font-weight: 600; margin: 4px 0 12px; }
+.cp-btn {
+  background: white;
+  color: var(--sage-dark);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.progress-timeline { margin-bottom: 28px; }
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 0;
+  position: relative;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 15px; top: 34px;
+  width: 2px;
+  height: calc(100% - 10px);
+  background: var(--border);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--sage);
+  border: 2px solid white;
+  box-shadow: 0 0 0 3px rgba(92,122,107,0.2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  margin-top: 2px;
+}
+.timeline-dot.upcoming {
+  background: var(--mist);
+  color: var(--sage-light);
+  box-shadow: none;
+}
+.timeline-content {
+  flex: 1;
+  padding-bottom: 24px;
+}
+.tl-date { font-size: 10px; color: var(--sage-light); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.tl-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+.tl-body { font-size: 12px; color: var(--sage); line-height: 1.6; }
+
+.metric-trends {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.trend-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.trend-name { font-size: 10px; color: var(--sage-light); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.trend-val { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; color: var(--ink); }
+.trend-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.trend-up { background: rgba(92,122,107,0.1); color: var(--sage-dark); }
+.trend-dn { background: rgba(212,137,122,0.1); color: var(--blush); }
+
+/* ─── PROFILE SCREEN ─── */
+#profile {
+  background: var(--warm-white);
+}
+.profile-header {
+  background: linear-gradient(180deg, var(--ink) 0%, var(--sage-dark) 100%);
+  padding: 60px 28px 48px;
+  position: relative;
+  text-align: center;
+  overflow: hidden;
+}
+.profile-header::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background: radial-gradient(ellipse at 50% 80%, rgba(201,168,76,0.15) 0%, transparent 60%);
+}
+.avatar {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: conic-gradient(var(--sage), var(--gold), var(--blush), var(--sage));
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  position: relative; z-index:2;
+  border: 3px solid rgba(255,255,255,0.2);
+}
+.profile-name { font-family:'Playfair Display',serif; font-size:24px; color:white; font-weight:600; position:relative;z-index:2; }
+.profile-sub { font-size:12px; color:rgba(255,255,255,0.5); margin-top:4px; position:relative;z-index:2; }
+.profile-plan {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background: rgba(201,168,76,0.2);
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 5px 14px;
+  border-radius:99px;
+  font-size:12px;
+  color:var(--gold);
+  font-weight:600;
+  margin-top:12px;
+  position:relative;z-index:2;
+}
+
+.profile-body { padding: 24px 28px 120px; }
+.setting-group { margin-bottom: 24px; }
+.sg-title { font-size:11px; color:var(--sage-light); text-transform:uppercase; letter-spacing:1.5px; font-weight:600; margin-bottom:12px; }
+.setting-item {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.setting-item:last-child { border-bottom: none; }
+.si-left { display:flex; align-items:center; gap:12px; }
+.si-icon {
+  width:36px; height:36px;
+  border-radius:10px;
+  background: var(--surface);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+}
+.si-info .si-name { font-size:14px; font-weight:500; color:var(--ink); }
+.si-info .si-sub { font-size:11px; color:var(--sage-light); margin-top:1px; }
+.si-arrow { color:var(--sage-light); font-size:14px; }
+
+/* Toggle */
+.toggle {
+  position: relative;
+  width: 44px; height: 24px;
+}
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-track {
+  position:absolute; inset:0;
+  background: var(--mist);
+  border-radius:99px;
+  transition: background 0.3s;
+  cursor: pointer;
+}
+.toggle input:checked + .toggle-track { background: var(--sage); }
+.toggle-thumb {
+  position:absolute;
+  top:2px; left:2px;
+  width:20px; height:20px;
+  background:white;
+  border-radius:50%;
+  transition: transform 0.3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.toggle input:checked ~ .toggle-thumb { transform: translateX(20px); }
+
+/* ─── BOTTOM NAV ─── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 390px;
+  background: rgba(253,250,246,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  padding: 10px 20px 24px;
+  display: flex;
+  justify-content: space-around;
+  z-index: 100;
+}
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 12px;
+  transition: all 0.2s;
+  border: none;
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+}
+.nav-item:hover { background: var(--surface); }
+.nav-item.active { background: rgba(92,122,107,0.1); }
+.nav-icon { font-size: 22px; transition: transform 0.2s; }
+.nav-item.active .nav-icon { transform: scale(1.1); }
+.nav-label { font-size: 10px; font-weight: 500; color: var(--sage-light); letter-spacing: 0.3px; }
+.nav-item.active .nav-label { color: var(--sage-dark); font-weight: 600; }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,17,23,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.modal-sheet {
+  background: var(--warm-white);
+  width: 390px;
+  border-radius: 24px 24px 0 0;
+  padding: 28px;
+  max-height: 70%;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+.modal-overlay.open .modal-sheet {
+  transform: translateY(0);
+}
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--mist);
+  border-radius: 99px;
+  margin: 0 auto 24px;
+}
+.modal-title { font-family:'Playfair Display',serif; font-size:22px; font-weight:600; color:var(--ink); margin-bottom:8px; }
+.modal-sub { font-size:13px; color:var(--sage); line-height:1.6; margin-bottom:20px; }
+.modal-ingredient-detail {
+  background: var(--surface);
+  border-radius: var(--r);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.mid-label { font-size:11px; color:var(--sage-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+.mid-val { font-size:14px; color:var(--ink); font-weight:500; }
+.modal-studies {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+}
+.ms-title { font-size:12px; font-weight:600; color:var(--sage-dark); margin-bottom:8px; }
+.ms-study { font-size:11px; color:var(--sage); line-height:1.5; margin-bottom:6px; padding-left:12px; position:relative; }
+.ms-study::before { content:'→'; position:absolute; left:0; color:var(--gold); }
+
+/* ─── ANIMATIONS ─── */
+@keyframes slide-up {
+  from { opacity:0; transform:translateY(20px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.anim { animation: slide-up 0.5s ease forwards; opacity:0; }
+.anim-d1 { animation-delay: 0.1s; }
+.anim-d2 { animation-delay: 0.2s; }
+.anim-d3 { animation-delay: 0.3s; }
+.anim-d4 { animation-delay: 0.4s; }
+.anim-d5 { animation-delay: 0.5s; }
+.anim-d6 { animation-delay: 0.6s; }
+
+/* ─── ONBOARD STEP PANELS ─── */
+.step-panel { display:none; }
+.step-panel.active { display:block; }
+
+/* FLOATING LABEL INPUT */
+.float-group {
+  position: relative;
+  margin-bottom: 16px;
+}
+.float-input {
+  width: 100%;
+  padding: 20px 16px 8px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  font-family:'DM Sans',sans-serif;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.float-input:focus { border-color: var(--sage); }
+.float-label {
+  position:absolute;
+  top:14px; left:16px;
+  font-size:15px;
+  color:var(--sage-light);
+  transition: all 0.2s;
+  pointer-events:none;
+}
+.float-input:focus ~ .float-label,
+.float-input:not(:placeholder-shown) ~ .float-label {
+  top:6px;
+  font-size:10px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--sage);
+}
+
+.onboard-actions {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(0deg, var(--warm-white) 80%, transparent);
+  padding: 20px 0 32px;
+  margin-top: 20px;
+}
+
+/* ─── LOADING SCAN OVERLAY ─── */
+.scan-loading {
+  position:fixed; inset:0;
+  background: var(--ink);
+  z-index:500;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:20px;
+  opacity:0;
+  pointer-events:none;
+  transition: opacity 0.4s;
+}
+.scan-loading.active { opacity:1; pointer-events:all; }
+.scan-loading-orb {
+  width:120px; height:120px;
+  border-radius:50%;
+  background: conic-gradient(var(--sage), var(--gold), var(--blush), var(--sky), var(--sage));
+  animation: spin-slow 3s linear infinite;
+  position:relative;
+}
+.scan-loading-orb::after {
+  content:'✦';
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:40px; color:white;
+  animation: spin-slow 3s linear infinite reverse;
+}
+.scan-loading h2 { font-family:'Playfair Display',serif; font-size:24px; color:white; text-align:center; }
+.scan-loading-steps { display:flex; flex-direction:column; gap:8px; width:280px; }
+.sls-item {
+  display:flex; align-items:center; gap:10px;
+  font-size:13px; opacity:0.3; transition:opacity 0.5s;
+}
+.sls-item.active { opacity:1; }
+.sls-dot { width:8px; height:8px; background:var(--sage); border-radius:50%; flex-shrink:0; }
+.sls-text { color:rgba(255,255,255,0.8); }
+
+/* Progress line on scan-loading screen */
+.scan-progress-bar {
+  width:280px; height:3px;
+  background: rgba(255,255,255,0.1);
+  border-radius:99px;
+  overflow:hidden;
+}
+.scan-progress-fill {
+  height:100%;
+  background: linear-gradient(90deg, var(--sage), var(--gold));
+  border-radius:99px;
+  width:0%;
+  transition: width 0.3s ease;
+}
+
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- ─── SPLASH SCREEN ─── -->
+  <div class="screen active" id="splash">
+    <div class="splash-bg"></div>
+    <div class="splash-content">
+      <div class="splash-orb"></div>
+      <div class="splash-brand">
+        <h1>SkinStack</h1>
+        <p>Personalised Skincare</p>
+      </div>
+      <p class="splash-tagline">"Your skin is unlike anyone else's.<br>Your formula should be too."</p>
+      <div class="splash-trust">
+        <div class="trust-item">
+          <span class="trust-num">50K+</span>
+          <span class="trust-label">Users</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <span class="trust-num">500+</span>
+          <span class="trust-label">Formulas</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <span class="trust-num">4.8★</span>
+          <span class="trust-label">Rating</span>
+        </div>
+      </div>
+      <div class="splash-cta">
+        <button class="btn-primary" onclick="goto('onboard')">Begin Your Skin Journey</button>
+        <button class="btn-ghost" onclick="goto('results')">Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ONBOARDING SCREEN ─── -->
+  <div class="screen" id="onboard">
+    <div class="onboard-header">
+      <div class="progress-bar">
+        <div class="progress-dot done" id="pd1"></div>
+        <div class="progress-dot active" id="pd2"></div>
+        <div class="progress-dot" id="pd3"></div>
+        <div class="progress-dot" id="pd4"></div>
+      </div>
+      <div class="step-label" id="step-label">Step 1 of 4 — Face Scan</div>
+      <h2 class="step-title" id="step-title">Let's read your skin</h2>
+      <p class="step-sub" id="step-sub">Our AI maps 25+ biomarkers in real time. Hold your phone in natural light.</p>
+    </div>
+
+    <div class="onboard-content">
+
+      <!-- STEP 1: SCAN -->
+      <div class="step-panel active" id="step1">
+        <div class="scan-wrapper anim">
+          <div class="face-outline">
+            <div class="scan-grid"></div>
+            <div class="scan-line"></div>
+            <div class="scan-dots">
+              <div class="scan-dot" style="top:25%;left:30%;animation-delay:0.2s"></div>
+              <div class="scan-dot" style="top:25%;left:70%;animation-delay:0.5s"></div>
+              <div class="scan-dot" style="top:55%;left:50%;animation-delay:0.8s"></div>
+              <div class="scan-dot" style="top:65%;left:35%;animation-delay:1.1s"></div>
+              <div class="scan-dot" style="top:65%;left:65%;animation-delay:1.4s"></div>
+              <div class="scan-dot" style="top:40%;left:20%;animation-delay:0.6s"></div>
+              <div class="scan-dot" style="top:40%;left:80%;animation-delay:0.9s"></div>
+            </div>
+            <div class="scan-corner sc-tl"></div>
+            <div class="scan-corner sc-tr"></div>
+            <div class="scan-corner sc-bl"></div>
+            <div class="scan-corner sc-br"></div>
+          </div>
+        </div>
+        <p class="scan-status anim anim-d1" id="scan-status">📡 Scanning...</p>
+        <p class="analyzing-text" id="analyzing-text">Analyzing sebum zones...</p>
+
+        <div style="height:20px"></div>
+        <div class="question-card anim anim-d2">
+          <div class="q-label">About you</div>
+          <div class="q-text">What's your age range?</div>
+          <div class="q-options">
+            <button class="q-opt" onclick="selectOpt(this)">18–24</button>
+            <button class="q-opt" onclick="selectOpt(this)">25–34</button>
+            <button class="q-opt" onclick="selectOpt(this)">35–44</button>
+            <button class="q-opt" onclick="selectOpt(this)">45+</button>
+          </div>
+        </div>
+
+        <div class="question-card anim anim-d3">
+          <div class="q-label">Primary concern</div>
+          <div class="q-text">What bothers you most about your skin?</div>
+          <div class="q-options">
+            <button class="q-opt" onclick="selectOpt(this)">Dark spots</button>
+            <button class="q-opt" onclick="selectOpt(this)">Acne & oiliness</button>
+            <button class="q-opt" onclick="selectOpt(this)">Dryness</button>
+            <button class="q-opt" onclick="selectOpt(this)">Anti-aging</button>
+          </div>
+        </div>
+
+        <div class="onboard-actions">
+          <button class="btn-primary" onclick="nextStep()">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: LIFESTYLE -->
+      <div class="step-panel" id="step2">
+        <div class="question-card anim">
+          <div class="q-label">Sleep</div>
+          <div class="q-text">How many hours do you sleep on average?</div>
+          <div class="slider-container">
+            <input type="range" class="range-input" min="4" max="10" value="7" oninput="updateSlider(this,'sleep-val',' hrs')">
+            <div class="range-labels">
+              <span>4 hrs</span>
+              <span id="sleep-val" style="font-weight:600;color:var(--sage-dark)">7 hrs</span>
+              <span>10 hrs</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="question-card anim anim-d1">
+          <div class="q-label">Diet signals</div>
+          <div class="q-text">How often do you consume dairy or sugar?</div>
+          <div class="q-options">
+            <button class="q-opt" onclick="selectOpt(this)">Rarely</button>
+            <button class="q-opt" onclick="selectOpt(this)">Occasionally</button>
+            <button class="q-opt" onclick="selectOpt(this)" style="">Daily</button>
+            <button class="q-opt" onclick="selectOpt(this)">Every meal</button>
+          </div>
+        </div>
+
+        <div class="question-card anim anim-d2">
+          <div class="q-label">Stress Level</div>
+          <div class="q-text">How would you rate your current stress?</div>
+          <div class="q-options">
+            <button class="q-opt" onclick="selectOpt(this)">😌 Low</button>
+            <button class="q-opt selected" onclick="selectOpt(this)">😐 Medium</button>
+            <button class="q-opt" onclick="selectOpt(this)">😤 High</button>
+            <button class="q-opt" onclick="selectOpt(this)">🔥 Very High</button>
+          </div>
+        </div>
+
+        <div class="question-card anim anim-d3">
+          <div class="q-label">Water intake</div>
+          <div class="q-text">Glasses of water per day?</div>
+          <div class="slider-container">
+            <input type="range" class="range-input" min="2" max="12" value="6" oninput="updateSlider(this,'water-val',' glasses')">
+            <div class="range-labels">
+              <span>2</span>
+              <span id="water-val" style="font-weight:600;color:var(--sage-dark)">6 glasses</span>
+              <span>12</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="onboard-actions">
+          <button class="btn-primary" onclick="nextStep()">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: ENVIRONMENT -->
+      <div class="step-panel" id="step3">
+        <div class="question-card anim">
+          <div class="q-label">📍 Location detected</div>
+          <div class="q-text" style="font-size:15px;color:var(--sage-dark)">Mumbai, Maharashtra</div>
+          <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">
+            <div>
+              <div style="font-size:22px">☁️</div>
+              <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--ink)">142</div>
+              <div style="font-size:10px;color:var(--sage-light);text-transform:uppercase;letter-spacing:1px">AQI</div>
+            </div>
+            <div>
+              <div style="font-size:22px">☀️</div>
+              <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--ink)">8.2</div>
+              <div style="font-size:10px;color:var(--sage-light);text-transform:uppercase;letter-spacing:1px">UV Index</div>
+            </div>
+            <div>
+              <div style="font-size:22px">💧</div>
+              <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--ink)">78%</div>
+              <div style="font-size:10px;color:var(--sage-light);text-transform:uppercase;letter-spacing:1px">Humidity</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:10px;font-size:12px;color:var(--bark);line-height:1.5;">
+            ⚠️ High AQI detected. Your formula will include elevated antioxidant protection (Ferulic Acid + Astaxanthin).
+          </div>
+        </div>
+
+        <div class="question-card anim anim-d1">
+          <div class="q-label">Hormonal cycle (optional)</div>
+          <div class="q-text">Do you want cycle-aware skin intelligence?</div>
+          <div class="q-options">
+            <button class="q-opt selected" onclick="selectOpt(this)" style="grid-column:1/-1">Yes, sync with my cycle app</button>
+            <button class="q-opt" onclick="selectOpt(this)" style="grid-column:1/-1">Skip for now</button>
+          </div>
+        </div>
+
+        <div class="question-card anim anim-d2">
+          <div class="q-label">Current Routine</div>
+          <div class="q-text">What do you use right now?</div>
+          <div class="q-options">
+            <button class="q-opt" onclick="selectOpt(this)">Nothing yet</button>
+            <button class="q-opt" onclick="selectOpt(this)">Basic (CTM)</button>
+            <button class="q-opt selected" onclick="selectOpt(this)">Mixed brands</button>
+            <button class="q-opt" onclick="selectOpt(this)">Full routine</button>
+          </div>
+        </div>
+
+        <div class="onboard-actions">
+          <button class="btn-primary" onclick="nextStep()">Build My Formula →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: PLAN SELECTION -->
+      <div class="step-panel" id="step4">
+        <p style="font-size:14px;color:var(--sage);margin-bottom:20px;line-height:1.6;">Based on your profile, we've built a unique formula. Choose your SkinStack plan to receive it.</p>
+
+        <div id="plan-essentials" class="anim" style="background:var(--card);border:2px solid var(--border);border-radius:var(--r-lg);padding:20px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;" onclick="selectPlan('essentials')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px;color:var(--sage-light);text-transform:uppercase;letter-spacing:1px;">Essentials</div>
+              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:var(--ink);">3 Custom Products</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--ink);">₹1,499</div>
+              <div style="font-size:11px;color:var(--sage-light);">/month</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span style="background:var(--surface);padding:4px 10px;border-radius:99px;font-size:11px;color:var(--sage);">Custom Cleanser</span>
+            <span style="background:var(--surface);padding:4px 10px;border-radius:99px;font-size:11px;color:var(--sage);">Moisturiser</span>
+            <span style="background:var(--surface);padding:4px 10px;border-radius:99px;font-size:11px;color:var(--sage);">SPF</span>
+          </div>
+        </div>
+
+        <div id="plan-pro" class="anim anim-d1" style="background:linear-gradient(135deg,var(--sage-dark),var(--sage));border:2px solid transparent;border-radius:var(--r-lg);padding:20px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;" onclick="selectPlan('pro')">
+          <div style="position:absolute;top:12px;right:16px;background:var(--gold);color:var(--ink);font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:0.5px;">RECOMMENDED</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px;">Pro</div>
+              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:white;">5 Custom Products</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:white;">₹2,799</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.5);">/month</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:99px;font-size:11px;color:white;">Full Stack</span>
+            <span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:99px;font-size:11px;color:white;">Derm Access</span>
+            <span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:99px;font-size:11px;color:white;">Living Formula</span>
+          </div>
+        </div>
+
+        <div id="plan-prestige" class="anim anim-d2" style="background:var(--card);border:2px solid var(--gold-light);border-radius:var(--r-lg);padding:20px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;" onclick="selectPlan('prestige')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">✦ Prestige</div>
+              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:var(--ink);">Premium Everything</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--ink);">₹4,999</div>
+              <div style="font-size:11px;color:var(--sage-light);">/month</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span style="background:var(--gold-light);padding:4px 10px;border-radius:99px;font-size:11px;color:var(--bark);">Derm Consult</span>
+            <span style="background:var(--gold-light);padding:4px 10px;border-radius:99px;font-size:11px;color:var(--bark);">Priority Dispatch</span>
+            <span style="background:var(--gold-light);padding:4px 10px;border-radius:99px;font-size:11px;color:var(--bark);">Retinol Access</span>
+          </div>
+        </div>
+
+        <div class="onboard-actions">
+          <button class="btn-primary" onclick="startScanLoading()">Start My SkinStack →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── RESULTS / HOME SCREEN ─── -->
+  <div class="screen" id="results">
+    <div class="results-hero">
+      <div class="hero-greeting">Good morning</div>
+      <div class="hero-name">Priya's Dashboard ✨</div>
+
+      <div class="skin-age-card">
+        <div class="age-ring">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="url(#ageGrad)" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="213.6" stroke-dashoffset="50" style="transition:stroke-dashoffset 1.5s ease"/>
+            <defs>
+              <linearGradient id="ageGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#5C7A6B"/>
+                <stop offset="100%" stop-color="#C9A84C"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="age-ring-text">
+            <div class="age-num">24</div>
+            <div class="age-label">Skin Age</div>
+          </div>
+        </div>
+        <div class="age-info">
+          <div class="age-headline">6 years younger</div>
+          <div class="age-sub">Your skin scores exceptionally well on hydration and elasticity for your age group.</div>
+          <div class="age-badge">↑ Improved 3pts this month</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-body">
+
+      <!-- BIOMARKERS -->
+      <div class="section-header anim">
+        <div class="section-title">Skin Biomarkers</div>
+        <a class="section-link" onclick="openModal('bioModal')">View all →</a>
+      </div>
+      <div class="biomarker-grid">
+        <div class="bio-card anim anim-d1">
+          <div class="bio-icon">💧</div>
+          <div class="bio-name">Hydration</div>
+          <div class="bio-value">78 <span class="bio-unit">%</span></div>
+          <div class="bio-bar"><div class="bio-fill" style="width:78%"></div></div>
+        </div>
+        <div class="bio-card anim anim-d2">
+          <div class="bio-icon">✨</div>
+          <div class="bio-name">Sebum</div>
+          <div class="bio-value">42 <span class="bio-unit">μg/cm²</span></div>
+          <div class="bio-bar"><div class="bio-fill" style="width:42%;background:linear-gradient(90deg,var(--gold),var(--blush))"></div></div>
+        </div>
+        <div class="bio-card anim anim-d3">
+          <div class="bio-icon">🌟</div>
+          <div class="bio-name">Elasticity</div>
+          <div class="bio-value">82 <span class="bio-unit">%</span></div>
+          <div class="bio-bar"><div class="bio-fill" style="width:82%"></div></div>
+        </div>
+        <div class="bio-card anim anim-d4">
+          <div class="bio-icon">🎨</div>
+          <div class="bio-name">Pigmentation</div>
+          <div class="bio-value">18 <span class="bio-unit">index</span></div>
+          <div class="bio-bar"><div class="bio-fill" style="width:18%;background:linear-gradient(90deg,var(--blush),var(--gold))"></div></div>
+        </div>
+      </div>
+
+      <!-- FORMULA CARD -->
+      <div class="section-header anim anim-d2">
+        <div class="section-title">Your Formula</div>
+        <a class="section-link" onclick="goto('formula')">Details →</a>
+      </div>
+      <div class="formula-card anim anim-d3" onclick="goto('formula')">
+        <div class="formula-label">Active this month</div>
+        <div class="formula-name">Formula #PB-2024-<br>Mumbai-V4</div>
+        <div class="formula-ingredients">
+          <span class="ingredient-pill">Niacinamide 8%</span>
+          <span class="ingredient-pill">Vit C 15%</span>
+          <span class="ingredient-pill">Ferulic Acid</span>
+          <span class="ingredient-pill">Ceramide NP</span>
+          <span class="ingredient-pill">+6 more</span>
+        </div>
+        <div class="formula-footer">
+          <div class="formula-status">Ships in 3 days 📦</div>
+          <button class="formula-cta">View Details</button>
+        </div>
+      </div>
+
+      <!-- ENVIRONMENT -->
+      <div class="section-header anim anim-d3">
+        <div class="section-title">Skin Environment</div>
+        <span class="section-link">Mumbai</span>
+      </div>
+      <div class="env-card anim anim-d4">
+        <div class="env-header">
+          <div class="section-title" style="font-size:16px">Today's Conditions</div>
+          <div class="env-location">📍 Mumbai</div>
+        </div>
+        <div class="env-metrics">
+          <div class="env-metric">
+            <div class="env-icon">☁️</div>
+            <div class="env-val">142</div>
+            <div class="env-lbl">AQI</div>
+          </div>
+          <div class="env-metric">
+            <div class="env-icon">☀️</div>
+            <div class="env-val">8.2</div>
+            <div class="env-lbl">UV Index</div>
+          </div>
+          <div class="env-metric">
+            <div class="env-icon">💧</div>
+            <div class="env-val">78%</div>
+            <div class="env-lbl">Humidity</div>
+          </div>
+        </div>
+        <div class="env-alert">⚡ High pollution day — your formula's antioxidant layer is active. Apply morning serum before leaving home.</div>
+      </div>
+
+      <!-- PRODUCT STACK -->
+      <div class="section-header anim anim-d5">
+        <div class="section-title">Your Stack</div>
+        <a class="section-link">Edit →</a>
+      </div>
+      <div class="product-scroll">
+        <div class="product-item">
+          <div class="product-img p-img-1">🧴</div>
+          <div class="product-info">
+            <div class="product-name">AM Cleanser</div>
+            <div class="product-sub">pH 5.2 balanced</div>
+            <div class="product-custom">✦ Custom</div>
+          </div>
+        </div>
+        <div class="product-item">
+          <div class="product-img p-img-2">⚗️</div>
+          <div class="product-info">
+            <div class="product-name">Active Serum</div>
+            <div class="product-sub">Vit C + Ferulic</div>
+            <div class="product-custom">✦ Custom</div>
+          </div>
+        </div>
+        <div class="product-item">
+          <div class="product-img p-img-3">🫧</div>
+          <div class="product-info">
+            <div class="product-name">Moisturiser</div>
+            <div class="product-sub">Ceramide barrier</div>
+            <div class="product-custom">✦ Custom</div>
+          </div>
+        </div>
+        <div class="product-item">
+          <div class="product-img p-img-4">🌞</div>
+          <div class="product-info">
+            <div class="product-name">SPF 45</div>
+            <div class="product-sub">UV calibrated</div>
+            <div class="product-custom">✦ Custom</div>
+          </div>
+        </div>
+        <div class="product-item">
+          <div class="product-img p-img-5">✨</div>
+          <div class="product-info">
+            <div class="product-name">Eye Serum</div>
+            <div class="product-sub">Dark circle focus</div>
+            <div class="product-custom">✦ Custom</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── FORMULA SCREEN ─── -->
+  <div class="screen" id="formula">
+    <div class="formula-hero">
+      <div class="fh-label">Your Unique Formula</div>
+      <div class="fh-title">Formula #PB-2024-Mumbai-V4</div>
+      <div class="fh-sub">10 active ingredients · Formulated Feb 2026</div>
+      <div class="fh-badge">🌿 No parabens · Cruelty free · Dermatologist reviewed</div>
+    </div>
+
+    <div class="formula-body">
+
+      <div class="formula-why-card anim">
+        <div class="fwc-title">Why this formula was built for you</div>
+        <div class="fwc-reason">
+          <div class="fwc-dot">1</div>
+          High AQI in Mumbai detected — elevated antioxidant complex added to fight pollution-induced oxidative stress.
+        </div>
+        <div class="fwc-reason">
+          <div class="fwc-dot">2</div>
+          Scan showed mild hyperpigmentation around T-zone — Vitamin C at 15% targets melanin production directly.
+        </div>
+        <div class="fwc-reason">
+          <div class="fwc-dot">3</div>
+          Medium stress level reported — Niacinamide at 8% addresses stress-related barrier compromise.
+        </div>
+        <div class="fwc-reason">
+          <div class="fwc-dot">4</div>
+          High ambient humidity — moisturiser uses lighter occlusive-humectant ratio to prevent congestion.
+        </div>
+      </div>
+
+      <div class="ingredient-section anim anim-d1">
+        <div class="ing-section-title">⭐ Core Actives</div>
+        <div class="ingredient-row" onclick="openIngredientModal('Vitamin C (Ascorbic Acid)','15%','Brightening & Antioxidant','Your scan showed melanin clustering in the mid-cheek zone. Vitamin C at 15% (L-Ascorbic Acid) directly inhibits tyrosinase enzyme, the key driver of pigmentation. Combined with Ferulic Acid, efficacy increases by 8x.','Reduces pigmentation up to 40% in 12 weeks (Telang, 2013); Boosts SPF efficacy by 4x when layered under sunscreen (Lin et al., 2003); Stimulates collagen synthesis (Pinnell et al., 2001)')">
+          <div class="ing-icon ing-a">✨</div>
+          <div class="ing-info">
+            <div class="ing-name">Vitamin C (Ascorbic Acid)</div>
+            <div class="ing-why">Brightening · AQI antioxidant defence</div>
+          </div>
+          <div class="ing-right">
+            <div class="ing-conc">15%</div>
+            <div class="ing-conc-label">Concentration</div>
+          </div>
+        </div>
+        <div class="ingredient-row" onclick="openIngredientModal('Niacinamide','8%','Barrier Repair & Sebum Control','Your stress score + scan sebum data indicates a compromised skin barrier. Niacinamide at 8% is the clinical sweet spot — above 5% for barrier repair efficacy, below 10% to avoid flushing for sensitive skin types.','Reduces transepidermal water loss by 24% (Gehring, 2004); Decreases sebum excretion rate in oily skin types (Draelos et al., 2006); Anti-inflammatory properties reduce redness and pore visibility')">
+          <div class="ing-icon ing-b">🛡️</div>
+          <div class="ing-info">
+            <div class="ing-name">Niacinamide</div>
+            <div class="ing-why">Barrier repair · Stress-acne prevention</div>
+          </div>
+          <div class="ing-right">
+            <div class="ing-conc">8%</div>
+            <div class="ing-conc-label">Concentration</div>
+          </div>
+        </div>
+        <div class="ingredient-row" onclick="openIngredientModal('Ferulic Acid','0.5%','Antioxidant Booster','High AQI = PM2.5 particles generate free radicals on skin. Ferulic acid is unique in that it potentiates Vitamin C\'s efficacy by 8x and is stable in the acidic pH needed for Vit C formulations. Critical for Mumbai city skin.','Doubles the photoprotective ability of Vit C + E (Lin et al., 2005); Reduces UV-induced skin damage markers by 55%; Stable antioxidant at pH 2.5–3.5, ideal for Vit C serum formulations')">
+          <div class="ing-icon ing-c">🌾</div>
+          <div class="ing-info">
+            <div class="ing-name">Ferulic Acid</div>
+            <div class="ing-why">Pollution shield · Vitamin C amplifier</div>
+          </div>
+          <div class="ing-right">
+            <div class="ing-conc">0.5%</div>
+            <div class="ing-conc-label">Concentration</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ingredient-section anim anim-d2">
+        <div class="ing-section-title">💧 Barrier & Hydration</div>
+        <div class="ingredient-row" onclick="openIngredientModal('Ceramide NP','2%','Barrier Restoration','Your scan detected slightly elevated transepidermal water loss (TEWL) in the cheek zone — typical of combination skin in humid climates with high pollution. Ceramide NP is the most studied ceramide for barrier repair in Fitzpatrick III–V skin types.','Restores stratum corneum barrier by filling lipid gaps between skin cells; Reduces sensitivity and reactivity by 38% over 4 weeks; Shown to work synergistically with Niacinamide for superior barrier outcomes')">
+          <div class="ing-icon ing-d">🧱</div>
+          <div class="ing-info">
+            <div class="ing-name">Ceramide NP</div>
+            <div class="ing-why">Barrier restoration · TEWL reduction</div>
+          </div>
+          <div class="ing-right">
+            <div class="ing-conc">2%</div>
+            <div class="ing-conc-label">Concentration</div>
+          </div>
+        </div>
+        <div class="ingredient-row" onclick="openIngredientModal('Hyaluronic Acid (LMW)','1%','Deep Hydration','Low Molecular Weight HA penetrates deeper than standard HA, reaching the dermis for deep hydration without relying on surface occlusion. Ideal for Mumbai\'s humid climate where heavy emollients cause congestion.','Binds up to 1000x its weight in water; LMW HA shown to penetrate to 20μm depth vs. standard HA at <5μm; Supports fibroblast activity and collagen synthesis at low concentrations')">
+          <div class="ing-icon ing-e">💎</div>
+          <div class="ing-info">
+            <div class="ing-name">Hyaluronic Acid (LMW)</div>
+            <div class="ing-why">Deep hydration · Humidity-calibrated</div>
+          </div>
+          <div class="ing-right">
+            <div class="ing-conc">1%</div>
+            <div class="ing-conc-label">Concentration</div>
+          </div>
+        </div>
+        <div class="ingredient-row" onclick="openIngredientModal('Astaxanthin','0.1%','Super Antioxidant','Unique to SkinStack. Astaxanthin is the most potent natural antioxidant known — 6,000x stronger than Vitamin C in singlet oxygen quenching. Added specifically because Mumbai\'s AQI 142 generates singlet oxygen damage not addressed by standard antioxidants.','6,000x more potent than Vitamin C in singlet oxygen quenching (Nishida et al., 2007); Reduces UV-induced skin damage by 40%; Anti-inflammatory; Improves skin elasticity by 98% in 8 weeks (Tominaga et al., 2012)')">
+          <div class="ing-icon ing-f">🦐</div>
+          <div class="ing-info">
+            <div class="ing-name">Astaxanthin</div>
+            <div class="ing-why">Pollution super-shield · Unique to your formula</div>
+          </div>
+          <div class="ing-right">
+            <div class="ing-conc">0.1%</div>
+            <div class="ing-conc-label">Concentration</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border-radius:var(--r-lg);padding:20px;margin-bottom:24px;" class="anim anim-d3">
+        <div style="font-size:13px;color:var(--sage-dark);font-weight:600;margin-bottom:8px;">🔬 Dermatologist Review</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--blush-light),var(--gold-light));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">👩‍⚕️</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink);">Dr. Meera Krishnamurti</div>
+            <div style="font-size:11px;color:var(--sage);margin-top:2px;">Reviewed Feb 14, 2026 · MBBS, MD Dermatology</div>
+            <div style="font-size:12px;color:var(--ink);margin-top:6px;line-height:1.5;">"Formula is well-calibrated for hyperpigmentation in humid, high-pollution environment. Vitamin C-Ferulic combination is the gold standard."</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── JOURNEY SCREEN ─── -->
+  <div class="screen" id="journey">
+    <div class="journey-header">
+      <div class="step-label">Your Skin Story</div>
+      <h2 class="step-title">Skin Journey</h2>
+      <p class="step-sub">Every month, your formula evolves. Every scan, your skin gets understood.</p>
+    </div>
+    <div class="journey-body">
+
+      <div class="checkin-prompt anim">
+        <div class="cp-label">Monthly check-in due</div>
+        <div class="cp-title">Time to scan your skin and update your formula</div>
+        <button class="cp-btn" onclick="goto('onboard')">Start 30-sec Scan</button>
+      </div>
+
+      <div class="section-header anim anim-d1">
+        <div class="section-title">Progress Metrics</div>
+      </div>
+      <div class="metric-trends">
+        <div class="trend-card anim anim-d1">
+          <div class="trend-name">Hydration</div>
+          <div class="trend-val">78%</div>
+          <div class="trend-change trend-up">↑ +12%</div>
+        </div>
+        <div class="trend-card anim anim-d2">
+          <div class="trend-name">Pigmentation</div>
+          <div class="trend-val">18 pts</div>
+          <div class="trend-change trend-up">↓ −6 pts</div>
+        </div>
+        <div class="trend-card anim anim-d3">
+          <div class="trend-name">Elasticity</div>
+          <div class="trend-val">82%</div>
+          <div class="trend-change trend-up">↑ +8%</div>
+        </div>
+        <div class="trend-card anim anim-d4">
+          <div class="trend-name">Skin Age</div>
+          <div class="trend-val">24 yrs</div>
+          <div class="trend-change trend-up">↑ −3 pts</div>
+        </div>
+      </div>
+
+      <div class="section-header anim anim-d2">
+        <div class="section-title">Formula Timeline</div>
+      </div>
+      <div class="progress-timeline">
+        <div class="timeline-item anim anim-d2">
+          <div class="timeline-dot">✓</div>
+          <div class="timeline-content">
+            <div class="tl-date">Feb 2026</div>
+            <div class="tl-title">Formula V4 dispatched</div>
+            <div class="tl-body">Vitamin C increased to 15% after improved barrier score. Astaxanthin added for winter AQI spike in Mumbai.</div>
+          </div>
+        </div>
+        <div class="timeline-item anim anim-d3">
+          <div class="timeline-dot">✓</div>
+          <div class="timeline-content">
+            <div class="tl-date">Jan 2026</div>
+            <div class="tl-title">Scan: Hydration improved +12%</div>
+            <div class="tl-body">Ceramide NP protocol showing strong results. Skin barrier score now at 78 — clinical normal range achieved.</div>
+          </div>
+        </div>
+        <div class="timeline-item anim anim-d4">
+          <div class="timeline-dot">✓</div>
+          <div class="timeline-content">
+            <div class="tl-date">Dec 2025</div>
+            <div class="tl-title">Formula V3 — Barrier Focus</div>
+            <div class="tl-body">Post-Diwali scan detected pollution damage. Ceramide NP + Niacinamide concentration adjusted. Retinol paused.</div>
+          </div>
+        </div>
+        <div class="timeline-item anim anim-d5">
+          <div class="timeline-dot">✓</div>
+          <div class="timeline-content">
+            <div class="tl-date">Nov 2025</div>
+            <div class="tl-title">SkinStack started 🎉</div>
+            <div class="tl-body">Initial scan complete. Formula V1 dispatched. Skin Age baseline set at 27. Journey begins.</div>
+          </div>
+        </div>
+        <div class="timeline-item anim anim-d6">
+          <div class="timeline-dot upcoming">○</div>
+          <div class="timeline-content">
+            <div class="tl-date">Mar 2026 — Upcoming</div>
+            <div class="tl-title">Formula V5 — Spring Recalibration</div>
+            <div class="tl-body">Monsoon pre-season: SPF will be upgraded, humidity-adaptive moisturiser ratio adjusted. Check-in due Feb 28.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── PROFILE SCREEN ─── -->
+  <div class="screen" id="profile">
+    <div class="profile-header">
+      <div class="avatar">👩</div>
+      <div class="profile-name">Priya Bhatt</div>
+      <div class="profile-sub">Member since November 2025</div>
+      <div class="profile-plan">✦ SkinStack Pro</div>
+    </div>
+    <div class="profile-body">
+
+      <div class="setting-group anim">
+        <div class="sg-title">Skin Profile</div>
+        <div class="setting-item" onclick="goto('onboard')">
+          <div class="si-left">
+            <div class="si-icon">🔬</div>
+            <div class="si-info">
+              <div class="si-name">Re-do Skin Scan</div>
+              <div class="si-sub">Last scan: Feb 14, 2026</div>
+            </div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon">🌏</div>
+            <div class="si-info">
+              <div class="si-name">Location</div>
+              <div class="si-sub">Mumbai, Maharashtra</div>
+            </div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon">🌸</div>
+            <div class="si-info">
+              <div class="si-name">Cycle Sync</div>
+              <div class="si-sub">Connected to Health app</div>
+            </div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-group anim anim-d1">
+        <div class="sg-title">Subscription</div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon">⭐</div>
+            <div class="si-info">
+              <div class="si-name">SkinStack Pro</div>
+              <div class="si-sub">₹2,799/month · Renews Mar 1</div>
+            </div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon">🎁</div>
+            <div class="si-info">
+              <div class="si-name">Refer a Friend</div>
+              <div class="si-sub">Get 1 month free each</div>
+            </div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon">✦</div>
+            <div class="si-info">
+              <div class="si-name">Upgrade to Prestige</div>
+              <div class="si-sub">Add derm consults + retinol</div>
+            </div>
+          </div>
+          <div style="background:var(--gold);color:var(--ink);padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;">Upgrade</div>
+        </div>
+      </div>
+
+      <div class="setting-group anim anim-d2">
+        <div class="sg-title">Preferences</div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon">🔔</div>
+            <div class="si-info">
+              <div class="si-name">Skin Alerts</div>
+              <div class="si-sub">AQI, UV, climate warnings</div>
+            </div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon">📊</div>
+            <div class="si-info">
+              <div class="si-name">Anonymous Data Sharing</div>
+              <div class="si-sub">Helps improve the formula AI</div>
+            </div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+        <div class="setting-item">
+          <div class="si-left">
+            <div class="si-icon">👩‍⚕️</div>
+            <div class="si-info">
+              <div class="si-name">Derm Network</div>
+              <div class="si-sub">Dr. Meera K. reviewing your formula</div>
+            </div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── BOTTOM NAV ─── -->
+  <div class="bottom-nav" id="bottomNav">
+    <button class="nav-item" onclick="goto('results')" id="nav-results">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="goto('formula')" id="nav-formula">
+      <span class="nav-icon">⚗️</span>
+      <span class="nav-label">Formula</span>
+    </button>
+    <button class="nav-item" onclick="goto('journey')" id="nav-journey">
+      <span class="nav-icon">📈</span>
+      <span class="nav-label">Journey</span>
+    </button>
+    <button class="nav-item" onclick="goto('profile')" id="nav-profile">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </button>
+  </div>
+
+  <!-- ─── INGREDIENT MODAL ─── -->
+  <div class="modal-overlay" id="ingredientModal" onclick="closeModal('ingredientModal',event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="modal-ing-name">Vitamin C</div>
+      <div class="modal-sub" id="modal-ing-why">Why this ingredient was chosen for your skin.</div>
+      <div class="modal-ingredient-detail">
+        <div class="mid-label">Concentration in your formula</div>
+        <div class="mid-val" id="modal-ing-conc">15%</div>
+      </div>
+      <div class="modal-ingredient-detail">
+        <div class="mid-label">Function</div>
+        <div class="mid-val" id="modal-ing-func">Brightening & Antioxidant</div>
+      </div>
+      <div class="modal-studies">
+        <div class="ms-title">📚 Clinical Evidence</div>
+        <div id="modal-ing-studies"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── BIO MODAL ─── -->
+  <div class="modal-overlay" id="bioModal" onclick="closeModal('bioModal',event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Full Skin Report</div>
+      <div class="modal-sub">Based on your Feb 14, 2026 scan. 25 biomarkers analyzed.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="modal-ingredient-detail">
+          <div class="mid-label">Hydration</div>
+          <div class="mid-val">78% ↑ Excellent</div>
+        </div>
+        <div class="modal-ingredient-detail">
+          <div class="mid-label">Sebum Production</div>
+          <div class="mid-val">42 μg/cm² · Moderate</div>
+        </div>
+        <div class="modal-ingredient-detail">
+          <div class="mid-label">Skin Elasticity</div>
+          <div class="mid-val">82% ↑ High</div>
+        </div>
+        <div class="modal-ingredient-detail">
+          <div class="mid-label">Pigmentation Index</div>
+          <div class="mid-val">18 ↓ Improving</div>
+        </div>
+        <div class="modal-ingredient-detail">
+          <div class="mid-label">Pore Size</div>
+          <div class="mid-val">Medium · Visible</div>
+        </div>
+        <div class="modal-ingredient-detail">
+          <div class="mid-label">Texture Score</div>
+          <div class="mid-val">74% · Smooth</div>
+        </div>
+        <div class="modal-ingredient-detail">
+          <div class="mid-label">Fitzpatrick Type</div>
+          <div class="mid-val">Type IV · Brown</div>
+        </div>
+        <div class="modal-ingredient-detail">
+          <div class="mid-label">Skin Age</div>
+          <div class="mid-val">24 yrs · −6 from real</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <button class="btn-primary" style="margin-top:8px;" onclick="closeModal('bioModal',{target:document.getElementById('bioModal')})">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SCAN LOADING OVERLAY ─── -->
+  <div class="scan-loading" id="scanLoading">
+    <div class="scan-loading-orb"></div>
+    <h2>Building your formula…</h2>
+    <div class="scan-progress-bar">
+      <div class="scan-progress-fill" id="scanProgressFill"></div>
+    </div>
+    <div class="scan-loading-steps">
+      <div class="sls-item active" id="sls1"><div class="sls-dot"></div><div class="sls-text">Analyzing 25 skin biomarkers</div></div>
+      <div class="sls-item" id="sls2"><div class="sls-dot"></div><div class="sls-text">Processing lifestyle data</div></div>
+      <div class="sls-item" id="sls3"><div class="sls-dot"></div><div class="sls-text">Reading Mumbai's AQI & UV data</div></div>
+      <div class="sls-item" id="sls4"><div class="sls-dot"></div><div class="sls-text">Selecting ingredient concentrations</div></div>
+      <div class="sls-item" id="sls5"><div class="sls-dot"></div><div class="sls-text">Generating your unique formula</div></div>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+// ─── NAVIGATION ───
+const mainScreens = ['results','formula','journey','profile'];
+let currentScreen = 'splash';
+
+function goto(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById(id).scrollTop = 0;
+  currentScreen = id;
+
+  // Show/hide bottom nav
+  const nav = document.getElementById('bottomNav');
+  if (mainScreens.includes(id)) {
+    nav.style.display = 'flex';
+    // Update active nav
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navBtn = document.getElementById('nav-' + id);
+    if (navBtn) navBtn.classList.add('active');
+  } else {
+    nav.style.display = id === 'onboard' ? 'none' : 'flex';
+  }
+}
+
+// Init
+goto('splash');
+document.getElementById('nav-results').classList.add('active');
+
+// ─── SCAN ANIMATION TEXT ───
+const scanTexts = [
+  'Analyzing sebum zones...','Mapping pore density...','Reading melanin distribution...',
+  'Detecting fine lines...','Measuring skin texture...','Checking moisture gradient...',
+  'Identifying pigmentation clusters...','Calculating elasticity score...',
+  'Building your biomarker profile...'
+];
+let scanIdx = 0;
+setInterval(() => {
+  const el = document.getElementById('analyzing-text');
+  if (el) { el.textContent = scanTexts[scanIdx % scanTexts.length]; scanIdx++; }
+}, 1500);
+
+// ─── ONBOARDING STEPS ───
+let currentStep = 1;
+const stepData = [
+  { label:'Step 1 of 4 — Face Scan', title:'Let\'s read your skin', sub:'Our AI maps 25+ biomarkers in real time. Hold your phone in natural light.' },
+  { label:'Step 2 of 4 — Lifestyle', title:'Tell us about your life', sub:'Your sleep, diet and stress directly shape your skin — more than any product.' },
+  { label:'Step 3 of 4 — Environment', title:'Your skin\'s environment', sub:'Your city\'s AQI, UV, and humidity are factored into your personal formula.' },
+  { label:'Step 4 of 4 — Choose Plan', title:'Your formula is ready', sub:'Select a plan to receive your custom-manufactured SkinStack products.' }
+];
+
+function nextStep() {
+  if (currentStep < 4) {
+    document.getElementById('step' + currentStep).classList.remove('active');
+    currentStep++;
+    document.getElementById('step' + currentStep).classList.add('active');
+    updateProgress();
+    const d = stepData[currentStep - 1];
+    document.getElementById('step-label').textContent = d.label;
+    document.getElementById('step-title').textContent = d.title;
+    document.getElementById('step-sub').textContent = d.sub;
+    document.querySelector('.onboard-content').scrollTop = 0;
+  }
+}
+
+function updateProgress() {
+  const dots = document.querySelectorAll('.progress-dot');
+  dots.forEach((d, i) => {
+    d.classList.remove('done','active');
+    if (i < currentStep - 1) d.classList.add('done');
+    else if (i === currentStep - 1) d.classList.add('active');
+  });
+}
+
+function selectOpt(el) {
+  const parent = el.closest('.q-options');
+  parent.querySelectorAll('.q-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function updateSlider(input, valId, unit) {
+  const el = document.getElementById(valId);
+  if (el) el.textContent = input.value + unit;
+  const pct = (input.value - input.min) / (input.max - input.min) * 100;
+  input.style.background = `linear-gradient(90deg, var(--sage) ${pct}%, var(--mist) ${pct}%)`;
+}
+
+function selectPlan(plan) {
+  ['essentials','pro','prestige'].forEach(p => {
+    const el = document.getElementById('plan-' + p);
+    if (p === 'pro') {
+      el.style.border = p === plan ? '2px solid var(--gold)' : '2px solid transparent';
+    } else if (p === 'prestige') {
+      el.style.border = p === plan ? '2px solid var(--sage)' : '2px solid var(--gold-light)';
+    } else {
+      el.style.border = p === plan ? '2px solid var(--sage)' : '2px solid var(--border)';
+    }
+  });
+}
+
+// ─── SCAN LOADING ANIMATION ───
+function startScanLoading() {
+  const overlay = document.getElementById('scanLoading');
+  const fill = document.getElementById('scanProgressFill');
+  overlay.classList.add('active');
+
+  const steps = [1,2,3,4,5];
+  let pct = 0;
+  steps.forEach((s, i) => {
+    setTimeout(() => {
+      document.getElementById('sls'+s).classList.add('active');
+      pct = (i+1) * 20;
+      fill.style.width = pct + '%';
+    }, i * 700);
+  });
+
+  setTimeout(() => {
+    overlay.classList.remove('active');
+    currentStep = 1;
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step1').classList.add('active');
+    updateProgress();
+    goto('results');
+    document.querySelectorAll('.sls-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('sls1').classList.add('active');
+    fill.style.width = '0%';
+  }, 4200);
+}
+
+// ─── MODALS ───
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id, e) {
+  if (e.target === document.getElementById(id)) {
+    document.getElementById(id).classList.remove('open');
+  }
+}
+
+function openIngredientModal(name, conc, func, why, studies) {
+  document.getElementById('modal-ing-name').textContent = name;
+  document.getElementById('modal-ing-conc').textContent = conc;
+  document.getElementById('modal-ing-func').textContent = func;
+  document.getElementById('modal-ing-why').textContent = why;
+  
+  const studiesEl = document.getElementById('modal-ing-studies');
+  studiesEl.innerHTML = '';
+  studies.split(';').forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'ms-study';
+    d.textContent = s.trim();
+    studiesEl.appendChild(d);
+  });
+  
+  openModal('ingredientModal');
+}
+</script>
+
+<!-- Install Banner -->
+<div id="install-banner">
+  <div class="ib-icon">✦</div>
+  <div class="ib-text">
+    <div class="ib-title">Add SkinStack to Home Screen</div>
+    <div class="ib-sub">Works offline · Feels like a native app</div>
+  </div>
+  <button class="ib-btn" id="install-btn">Install</button>
+  <button class="ib-close" onclick="document.getElementById('install-banner').classList.remove('show')">✕</button>
+</div>
+<script>
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  setTimeout(() => { document.getElementById('install-banner').classList.add('show'); }, 3000);
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('install-banner').classList.remove('show');
+    }
+  });
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+<\/script>
+</body>
+</html>
